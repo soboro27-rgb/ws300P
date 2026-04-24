@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>관리자 — 구매 문의 접수 현황</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --primary: #76b900;
+      --primary-light: #9dd400;
+      --bg: #080c10;
+      --bg-2: #0d1218;
+      --bg-card: rgba(255,255,255,0.04);
+      --text: #e8edf4;
+      --text-sub: #7a8a9a;
+      --border: rgba(255,255,255,0.08);
+      --border-green: rgba(118,185,0,0.25);
+    }
+    body { font-family: 'Segoe UI', 'Apple SD Gothic Neo', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── 로그인 오버레이 ── */
+    #loginOverlay {
+      position: fixed; inset: 0; background: #080c10;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 999;
+    }
+    .login-card {
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border-green);
+      border-radius: 20px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 360px;
+      text-align: center;
+    }
+    .login-icon { font-size: 2.8rem; margin-bottom: 18px; }
+    .login-card h2 { font-size: 1.4rem; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+    .login-card p { font-size: 0.88rem; color: var(--text-sub); margin-bottom: 28px; line-height: 1.6; }
+    .login-input {
+      width: 100%;
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 13px 16px;
+      font-size: 0.95rem;
+      color: var(--text);
+      font-family: inherit;
+      outline: none;
+      margin-bottom: 12px;
+      transition: border-color .2s;
+    }
+    .login-input:focus { border-color: var(--primary); }
+    .login-btn {
+      width: 100%;
+      background: var(--primary);
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      padding: 13px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .login-btn:hover { background: var(--primary-light); }
+    .login-error { color: #ff7070; font-size: 0.82rem; margin-top: 12px; display: none; }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(8,12,16,0.92); backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 40px; height: 64px;
+    }
+    .nav-title { font-size: 1rem; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+    .nav-title span { color: var(--text-sub); font-weight: 400; font-size: 0.85rem; }
+    .nav-links-right { display: flex; gap: 16px; align-items: center; }
+    .nav-link { color: var(--text-sub); text-decoration: none; font-size: 0.85rem; transition: color .2s; }
+    .nav-link:hover { color: var(--primary); }
+    .logout-btn {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,.15);
+      color: var(--text-sub);
+      border-radius: 8px;
+      padding: 7px 16px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: border-color .2s, color .2s;
+    }
+    .logout-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+    /* ── ADMIN CONTENT ── */
+    .admin-wrap { max-width: 1100px; margin: 0 auto; padding: 40px 24px 80px; }
+
+    /* 통계 카드 */
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px 24px;
+      transition: border-color .2s;
+    }
+    .stat-card:hover { border-color: var(--border-green); }
+    .stat-card-label { font-size: 0.78rem; color: var(--text-sub); font-weight: 600; letter-spacing: .04em; margin-bottom: 8px; }
+    .stat-card-value { font-size: 2rem; font-weight: 800; color: var(--primary); line-height: 1; }
+    .stat-card-value.white { color: var(--text); }
+    .stat-card-value.red { color: #ff7070; }
+
+    /* 툴바 */
+    .toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px; gap: 12px; flex-wrap: wrap;
+    }
+    .toolbar-title { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+    .toolbar-actions { display: flex; gap: 10px; }
+    .tool-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-sub);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: border-color .2s, color .2s;
+      font-family: inherit;
+    }
+    .tool-btn:hover { border-color: var(--border-green); color: var(--primary); }
+    .tool-btn.danger:hover { border-color: rgba(255,100,100,.4); color: #ff7070; }
+
+    /* 문의 카드 목록 */
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--text-sub);
+    }
+    .empty-icon { font-size: 3rem; margin-bottom: 16px; }
+    .empty-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+    .empty-desc { font-size: 0.88rem; line-height: 1.7; }
+
+    .inquiry-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px 28px;
+      margin-bottom: 14px;
+      transition: border-color .2s;
+      position: relative;
+    }
+    .inquiry-card.unread { border-color: rgba(118,185,0,.35); }
+    .inquiry-card:hover { border-color: var(--border-green); }
+
+    .card-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 16px; gap: 12px;
+    }
+    .card-company { font-size: 1.05rem; font-weight: 800; color: var(--text); }
+    .card-meta { font-size: 0.8rem; color: var(--text-sub); margin-top: 4px; }
+    .card-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+    .badge-new {
+      background: rgba(118,185,0,.2);
+      border: 1px solid rgba(118,185,0,.4);
+      color: var(--primary);
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .badge-read {
+      background: rgba(255,255,255,.05);
+      border: 1px solid var(--border);
+      color: var(--text-sub);
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    .card-fields {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .field-item { }
+    .field-label { font-size: 0.74rem; color: var(--text-sub); font-weight: 600; letter-spacing: .04em; margin-bottom: 4px; }
+    .field-value { font-size: 0.9rem; color: var(--text); font-weight: 500; }
+
+    .card-message {
+      background: rgba(255,255,255,.03);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 0.86rem;
+      color: var(--text-sub);
+      line-height: 1.65;
+      margin-bottom: 14px;
+    }
+    .card-message strong { color: var(--text-sub); font-weight: 600; font-size: 0.78rem; display: block; margin-bottom: 4px; }
+
+    .card-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .act-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-sub);
+      border-radius: 8px;
+      padding: 7px 14px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: border-color .2s, color .2s;
+      font-family: inherit;
+    }
+    .act-btn:hover { border-color: var(--border-green); color: var(--primary); }
+    .act-btn.del:hover { border-color: rgba(255,100,100,.4); color: #ff7070; }
+
+    /* 알림 토스트 */
+    .toast {
+      position: fixed; bottom: 28px; right: 28px;
+      background: rgba(118,185,0,.15);
+      border: 1px solid var(--border-green);
+      color: var(--primary);
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity .3s, transform .3s;
+      pointer-events: none;
+      z-index: 200;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    footer { background: #040704; border-top: 1px solid var(--border-green); color: rgba(255,255,255,.35); text-align: center; padding: 20px 40px; font-size: 0.8rem; }
+
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .card-fields { grid-template-columns: 1fr 1fr; }
+      .admin-wrap { padding: 24px 16px 60px; }
+    }
+    @media (max-width: 480px) {
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .card-fields { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── 로그인 오버레이 ── -->
+<div id="loginOverlay">
+  <div class="login-card">
+    <div class="login-icon">🔐</div>
+    <h2>관리자 로그인</h2>
+    <p>구매 문의 접수 현황을 확인하려면<br>관리자 비밀번호를 입력하세요.</p>
+    <input type="password" class="login-input" id="pwInput" placeholder="비밀번호" />
+    <button class="login-btn" onclick="login()">확인</button>
+    <div class="login-error" id="loginErr">비밀번호가 올바르지 않습니다.</div>
+  </div>
+</div>
+
+<!-- ── 관리자 화면 ── -->
+<div id="adminContent" style="display:none;">
+
+  <nav>
+    <div class="nav-title">
+      <svg width="26" height="26" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="7" fill="#76b900"/><path d="M7 14L14 7l7 7-7 7-7-7z" fill="#000" opacity=".85"/></svg>
+      관리자 <span>구매 문의 접수 현황</span>
+    </div>
+    <div class="nav-links-right">
+      <a href="index.html" class="nav-link">← 제품 페이지</a>
+      <a href="inquiry.html" class="nav-link">접수 폼</a>
+      <button class="logout-btn" onclick="logout()">로그아웃</button>
+    </div>
+  </nav>
+
+  <div class="admin-wrap">
+
+    <!-- 통계 -->
+    <div class="stats-row" id="statsRow">
+      <div class="stat-card">
+        <div class="stat-card-label">전체 접수</div>
+        <div class="stat-card-value white" id="statTotal">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">미확인</div>
+        <div class="stat-card-value red" id="statUnread">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">오늘 접수</div>
+        <div class="stat-card-value" id="statToday">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">확인 완료</div>
+        <div class="stat-card-value white" id="statRead">0</div>
+      </div>
+    </div>
+
+    <!-- 툴바 -->
+    <div class="toolbar">
+      <div class="toolbar-title">접수 목록 <span style="color:var(--text-sub);font-size:0.85rem;font-weight:400;" id="listCount"></span></div>
+      <div class="toolbar-actions">
+        <button class="tool-btn" onclick="markAllRead()">모두 읽음 처리</button>
+        <button class="tool-btn danger" onclick="clearAll()">전체 삭제</button>
+      </div>
+    </div>
+
+    <!-- 문의 목록 -->
+    <div id="inquiryList"></div>
+
+  </div>
+
+  <footer>
+    <p>관리자 전용 페이지 — <strong style="color:var(--primary);">MSI XpertStation WS300P</strong> 구매 문의 관리</p>
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ▶ 비밀번호 변경: 아래 ADMIN_PASSWORD 값을 수정하세요
+  const ADMIN_PASSWORD = 'ws300admin';
+  const STORAGE_KEY = 'ws300p_inquiries';
+
+  // 엔터키 로그인
+  document.getElementById('pwInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') login();
+  });
+
+  function login() {
+    const pw = document.getElementById('pwInput').value;
+    if (pw === ADMIN_PASSWORD) {
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('adminContent').style.display = 'block';
+      render();
+    } else {
+      document.getElementById('loginErr').style.display = 'block';
+      document.getElementById('pwInput').value = '';
+      document.getElementById('pwInput').focus();
+    }
+  }
+
+  function logout() {
+    document.getElementById('adminContent').style.display = 'none';
+    document.getElementById('loginOverlay').style.display = 'flex';
+    document.getElementById('loginErr').style.display = 'none';
+    document.getElementById('pwInput').value = '';
+  }
+
+  function getAll() {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  }
+  function saveAll(data) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  function formatDate(iso) {
+    const d = new Date(iso);
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function isToday(iso) {
+    const d = new Date(iso), t = new Date();
+    return d.getFullYear()===t.getFullYear() && d.getMonth()===t.getMonth() && d.getDate()===t.getDate();
+  }
+
+  function render() {
+    const all = getAll();
+    const total  = all.length;
+    const unread = all.filter(x => !x.read).length;
+    const today  = all.filter(x => isToday(x.timestamp)).length;
+    const read   = total - unread;
+
+    document.getElementById('statTotal').textContent  = total;
+    document.getElementById('statUnread').textContent = unread;
+    document.getElementById('statToday').textContent  = today;
+    document.getElementById('statRead').textContent   = read;
+    document.getElementById('listCount').textContent  = total ? `(총 ${total}건)` : '';
+
+    const list = document.getElementById('inquiryList');
+
+    if (total === 0) {
+      list.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📭</div>
+          <div class="empty-title">아직 접수된 문의가 없습니다</div>
+          <div class="empty-desc">
+            <a href="inquiry.html" style="color:var(--primary);">구매 문의 접수 페이지</a>에서 문의를 남기면 이곳에 표시됩니다.<br>
+            ※ 이 관리 페이지는 같은 브라우저에서 접수된 문의를 표시합니다.<br>이메일 알림은 FormSubmit.co 인증 후 자동 발송됩니다.
+          </div>
+        </div>`;
+      return;
+    }
+
+    list.innerHTML = all.map(item => `
+      <div class="inquiry-card ${item.read ? '' : 'unread'}" id="card-${item.id}">
+        <div class="card-header">
+          <div>
+            <div class="card-company">${esc(item.company)}</div>
+            <div class="card-meta">접수 일시: ${formatDate(item.timestamp)}</div>
+          </div>
+          <div class="card-right">
+            <span class="${item.read ? 'badge-read' : 'badge-new'}">${item.read ? '확인완료' : 'NEW'}</span>
+          </div>
+        </div>
+        <div class="card-fields">
+          <div class="field-item">
+            <div class="field-label">전화번호</div>
+            <div class="field-value">${esc(item.phone)}</div>
+          </div>
+          <div class="field-item">
+            <div class="field-label">이메일</div>
+            <div class="field-value">${esc(item.email)}</div>
+          </div>
+          <div class="field-item">
+            <div class="field-label">사용목적</div>
+            <div class="field-value">${esc(item.purpose)}</div>
+          </div>
+        </div>
+        ${item.message ? `
+        <div class="card-message">
+          <strong>문의 내용</strong>
+          ${esc(item.message)}
+        </div>` : ''}
+        <div class="card-actions">
+          ${!item.read ? `<button class="act-btn" onclick="markRead('${item.id}')">읽음 처리</button>` : ''}
+          <button class="act-btn" onclick="copyInfo('${item.id}')">정보 복사</button>
+          <button class="act-btn del" onclick="deleteItem('${item.id}')">삭제</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function markRead(id) {
+    const all = getAll().map(x => x.id === id ? {...x, read: true} : x);
+    saveAll(all);
+    render();
+    toast('읽음 처리 완료');
+  }
+
+  function deleteItem(id) {
+    if (!confirm('이 문의를 삭제하시겠습니까?')) return;
+    saveAll(getAll().filter(x => x.id !== id));
+    render();
+    toast('삭제되었습니다');
+  }
+
+  function markAllRead() {
+    saveAll(getAll().map(x => ({...x, read: true})));
+    render();
+    toast('모두 읽음 처리 완료');
+  }
+
+  function clearAll() {
+    if (!confirm('전체 문의 목록을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
+    saveAll([]);
+    render();
+    toast('전체 삭제 완료');
+  }
+
+  function copyInfo(id) {
+    const item = getAll().find(x => x.id === id);
+    if (!item) return;
+    const text = `상호명: ${item.company}\n전화번호: ${item.phone}\n이메일: ${item.email}\n사용목적: ${item.purpose}${item.message ? '\n문의내용: '+item.message : ''}`;
+    navigator.clipboard.writeText(text).then(() => toast('클립보드에 복사되었습니다'));
+  }
+
+  let toastTimer;
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+  }
+</script>
+
+</body>
+</html>
