@@ -48,7 +48,27 @@
     .page-header h1 { font-size: 2rem; font-weight: 800; color: #fff; margin-bottom: 12px; position: relative; }
     .page-header p { color: rgba(255,255,255,.65); font-size: 0.98rem; line-height: 1.7; position: relative; }
 
-    .form-wrap { max-width: 680px; margin: 0 auto; padding: 56px 24px 80px; }
+    .contact-bar {
+      max-width: 680px; margin: 0 auto; padding: 32px 24px 0;
+      display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+    }
+    .contact-item {
+      display: flex; align-items: center; gap: 10px;
+      background: rgba(118,185,0,.07);
+      border: 1px solid var(--border-green);
+      border-radius: 12px;
+      padding: 14px 22px;
+      text-decoration: none;
+      transition: background .2s, border-color .2s;
+      flex: 1; min-width: 200px; justify-content: center;
+    }
+    .contact-item:hover { background: rgba(118,185,0,.13); border-color: rgba(118,185,0,.5); }
+    .contact-item-icon { font-size: 1.2rem; flex-shrink: 0; }
+    .contact-item-info { }
+    .contact-item-label { font-size: 0.72rem; color: var(--text-sub); font-weight: 600; letter-spacing: .05em; margin-bottom: 3px; }
+    .contact-item-value { font-size: 0.95rem; font-weight: 700; color: var(--primary); }
+
+    .form-wrap { max-width: 680px; margin: 0 auto; padding: 32px 24px 80px; }
 
     .form-card {
       background: var(--bg-card);
@@ -165,6 +185,23 @@
 <div class="page-header">
   <h1>구매 문의 접수</h1>
   <p>MSI XpertStation WS300P 도입을 검토 중이시라면<br>아래 양식을 작성해 주세요. 담당자가 신속하게 연락드리겠습니다.</p>
+</div>
+
+<div class="contact-bar">
+  <a href="tel:010-9180-1410" class="contact-item">
+    <div class="contact-item-icon">📞</div>
+    <div class="contact-item-info">
+      <div class="contact-item-label">전화 문의</div>
+      <div class="contact-item-value">010-9180-1410</div>
+    </div>
+  </a>
+  <a href="mailto:soboro27@naver.com" class="contact-item">
+    <div class="contact-item-icon">✉️</div>
+    <div class="contact-item-info">
+      <div class="contact-item-label">이메일 문의</div>
+      <div class="contact-item-value">soboro27@naver.com</div>
+    </div>
+  </a>
 </div>
 
 <div class="form-wrap">
